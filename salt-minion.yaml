@@ -217,7 +217,7 @@ resources:
 
             yum install -y git
             git clone https://github.com/bluezoe/patterns.git
-            ./salt-wrapper.py register $SALT_API_USER $SALT_API_PASS
+            ./patterns/salt-wrapper.py register $SALT_API_USER $SALT_API_PASS
           params:
             $SALT_API_USER: { get_param: salt_api_user}
             $SALT_API_PASS: { get_param: salt_api_pass}
