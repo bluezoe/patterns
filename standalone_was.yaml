@@ -55,12 +55,14 @@ parameters:
     label: Password (root)
     type: string
     hidden: True
+    default: 'test'
     
   virtuser_password: 
     description: This is the password for the virtuser user of the system
     label: Password (virtuser)
     type: string
     hidden: True
+    default: 'test'
     
   yum_proxy_url:
     description: URL of Proxy to utilize, if no proxy is needed then leave empty
@@ -89,20 +91,20 @@ parameters:
     type: string
     description: Hostname/IP address of the salt-master, leave blank to use metadata.yaml 
     label: Saltmaster address
-    default: ''
+    default: '134.168.48.64'
     
   salt_api_user:
     type: string
     description: The user connecting to Salt API, leave blank to use metadata.yaml
     label: Salt api user
-    default: ''
+    default: 'saltauth'
 
   salt_api_pass:
     type: string
     description: Password for connecting to Salt API, leave blank to use metadata.yam
     label: Salt api password
     hidden: True
-    default: ''
+    default: 'pM0dularc'
  
 ############################
 # Server names
