@@ -1,0 +1,225 @@
+heat_template_version: 2013-05-23
+
+description: >
+  A document-based template to configure your Software Defined Environment.
+
+parameters:
+
+############################
+# Server parameters
+############################
+   
+  flavor:
+    type: string
+    description: Flavor to be used for compute instance
+    label: Flavor
+    constraints:
+    - custom_constraint: nova.flavor
+    
+  key_name:
+    type: string
+    description: 'For most clouds, the name of the key-pair to be used for the compute instance; for VMware clouds, the contents of the public SSH key for the compute instance'
+    label: SSH Key name
+    constraints:
+    - custom_constraint: nova.keypair
+    
+  private_network:
+    type: string
+    description: Private Network
+    label: Private network
+    default: 'private'
+    constraints:
+    - custom_constraint: neutron.network
+    
+  public_network:
+    type: string
+    description: Public Network for floating IP
+    label: Public network
+    default: 'Public-Network'
+    constraints:
+    - custom_constraint: neutron.network
+    
+  availability_zone:
+    type: string
+    description: 'Name of availability zone in which to create the instance'
+    label: Availability zone
+    default: 'nova'
+    
+  image_id:
+    type: string
+    description: OS Image to deploy onto
+    label: OS Image
+    constraints:
+    - custom_constraint: glance.image
+    
+  root_password: 
+    description: This is the password for the root user of the system
+    label: Password (root)
+    type: string
+    hidden: True
+    default: 'test'
+    
+  virtuser_password: 
+    description: This is the password for the virtuser user of the system
+    label: Password (virtuser)
+    type: string
+    hidden: True
+    default: 'test'
+    
+  yum_proxy_url:
+    description: URL of Proxy to utilize, if no proxy is needed then leave empty
+    label: Yum Proxy URL
+    type: string
+    hidden: True
+    default: ''
+ 
+  sw_repo_root:
+    default: 'http://169.254.0.1:8080/'
+    description: Software repository URL (e.g. http://x.x.x.x:8080/
+    label: Software Repository URL
+    type: string  
+     
+  yum_repo_url:
+    default: ''
+    description: URL to point to yum server e.g. http://x.x.x.x:yyyy
+    label: Yum repository url
+    type: string
+
+############################
+# Salt Specific Parameters
+############################
+
+  salt_master_address:
+    type: string
+    description: Hostname/IP address of the salt-master, leave blank to use metadata.yaml 
+    label: Saltmaster address
+    default: '134.168.48.64'
+    
+  salt_api_user:
+    type: string
+    description: The user connecting to Salt API, leave blank to use metadata.yaml
+    label: Salt api user
+    default: 'saltauth'
+
+  salt_api_pass:
+    type: string
+    description: Password for connecting to Salt API, leave blank to use metadata.yam
+    label: Salt api password
+    hidden: True
+    default: 'pM0dularc'
+ 
+############################
+# Server names
+############################
+
+  was_vm_name:
+    type: string
+    description: Name of the virtual machine to deploy
+    default: salt-minion
+
+
+parameter_groups:
+    - { label: 'Host Name Parameters', parameters: [was_vm_name] }
+    - { label: 'Image Parameters', parameters: [flavor, key_name, availability_zone, image_id, virtuser_password, root_password, yum_proxy_url, yum_repo_url, sw_repo_root] }
+    - { label: 'Network Parameters', parameters: [private_network, public_network] }
+    - { label: 'Salt Parameters', parameters: [salt_master_address, salt_api_user, salt_api_pass] }
+
+
+resources:
+
+############################
+# WebSphere Server
+############################ 
+
+  was_standalone:
+    type: OS::Nova::Server
+    properties:
+      networks:
+          - port: { get_resource: was_standalone_port }
+      name: { get_param:  was_vm_name }
+      image: {get_param: image_id }
+      flavor: { get_param: flavor }
+      availability_zone: { get_param: availability_zone }
+      key_name: { get_param: key_name }
+      config_drive: 'True'
+      user_data_format: RAW
+      user_data: {get_resource: was_standalone_init}
+
+  was_standalone_port__floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: public_network}
+      port_id: { get_resource: was_standalone_port }
+
+  was_standalone_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: private_network }   
+ 
+  was_standalone_init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+      - config: {get_resource: update_etc_hosts}
+      - config: {get_resource: bootstrap_salt}
+  
+  update_etc_hosts:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      config:
+        str_replace:
+          template: |
+            #!/usr/bin/env bash
+            set -e
+            sed -i '/$server_hostname/d' /etc/hosts
+            echo "$server_ip $server_hostname.$DOMAIN $server_hostname" >> /etc/hosts
+          params:
+            $server_hostname: { get_param: was_vm_name }
+            $server_ip: { get_attr: [was_standalone_port,fixed_ips, 0, ip_address] }
+            $DOMAIN: novalocal
+            
+############################
+#  General Scripts
+############################
+  bootstrap_salt:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      config:
+        str_replace:
+          template: |
+            #!/usr/bin/env bash
+            set -e
+            yum install -y https://repo.saltstack.com/yum/redhat/salt-repo-latest-1.el7.noarch.rpm 
+            yum install -y salt-minion
+
+            chkconfig salt-minion on
+            mkdir -p /etc/salt/pki/minion
+            
+            # retrieve saltMaster address from metadata if not passed
+            saltMaster=$SALT_MASTER
+
+            # Default log_level warning            
+            cat > /etc/salt/minion << EOF
+            log_level: warning
+            master:
+              - $saltMaster
+            id: $STACK_ID-`hostname -s`
+            mine_functions:
+              network.interfaces: []
+              grains.items: []
+            mine_interval: 1
+            EOF
+            
+            service salt-minion stop
+            sleep 10
+            service salt-minion start
+            sleep 30
+
+            yum install -y git
+            git clone https://github.com/bluezoe/patterns.git
+            ./salt-wrapper.py register $SALT_API_USER $SALT_API_PASS
+          params:
+            $SALT_API_USER: { get_param: salt_api_user}
+            $SALT_API_PASS: { get_param: salt_api_pass}
+            $STACK_ID: { get_param: "OS::stack_id" }
+            $SALT_MASTER: { get_param: salt_master_address }
