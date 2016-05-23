@@ -1,4 +1,4 @@
-#!/opt/saltstack/embedded/bin/python
+#!/usr/bin/python
 
 import sys
 import argparse
@@ -11,7 +11,7 @@ import os
 import yaml
 import time
 # disable ssl warnings...
-requests.packages.urllib3.disable_warnings()
+#requests.packages.urllib3.disable_warnings()
 
 
 parser = argparse.ArgumentParser(description='SaltStack HA helper script used \
