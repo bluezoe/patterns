@@ -27,7 +27,7 @@ parameters:
     type: string
     description: Private Network
     label: Private network
-    default: 'private'
+    default: private
     constraints:
     - custom_constraint: neutron.network
     
@@ -35,7 +35,7 @@ parameters:
     type: string
     description: Public Network for floating IP
     label: Public network
-    default: 'Public-Network'
+    default: Public-Network
     constraints:
     - custom_constraint: neutron.network
     
@@ -43,7 +43,7 @@ parameters:
     type: string
     description: 'Name of availability zone in which to create the instance'
     label: Availability zone
-    default: 'nova'
+    default: lon01
     
   image_id:
     type: string
@@ -57,14 +57,14 @@ parameters:
     label: Password (root)
     type: string
     hidden: True
-    default: 'test'
+    default: test
     
   virtuser_password: 
     description: This is the password for the virtuser user of the system
     label: Password (virtuser)
     type: string
     hidden: True
-    default: 'test'
+    default: test
  
   sw_repo_root:
     default: 'http://159.122.223.65/sw_repo/'
@@ -80,20 +80,20 @@ parameters:
     type: string
     description: Hostname/IP address of the salt-master, leave blank to use metadata.yaml 
     label: Saltmaster address
-    default: '134.168.48.64'
+    default: 134.168.48.64
     
   salt_api_user:
     type: string
     description: The user connecting to Salt API, leave blank to use metadata.yaml
     label: Salt api user
-    default: 'saltauth'
+    default: saltauth
 
   salt_api_pass:
     type: string
     description: Password for connecting to Salt API, leave blank to use metadata.yam
     label: Salt api password
     hidden: True
-    default: 'pM0dularc'
+    default: pM0dularc
  
 ############################
 # Server names
@@ -125,7 +125,7 @@ parameters:
     description: password for the Websphere operating system user
     label: WAS OS Users password
     hidden: True
-    default: 'test'
+    default: test
    
   was_admin_username:
     type: string
@@ -138,7 +138,7 @@ parameters:
     description: Admin password login was
     label: WAS Console password
     hidden: True
-    default: 'test'
+    default: test
         
   was_install_dir:
     type: string
@@ -191,22 +191,6 @@ parameters:
     description: java fixpack version
     label: Java fixpack version
     default: '7.1.3.10_0001'
-
-  sdk_32bit:
-    type: string
-    description: sdk feature, can select 32 bit or 64 bit
-    label: Enable 32bit SDK
-    default: false
-    constraints:
-    - allowed_values: [true,false]
-    
-  sdk_64bit:
-    type: string
-    description: sdk feature, can select 32 bit or 64 bit
-    label: Enable 64bit SDK
-    default: true
-    constraints:
-    - allowed_values: [true,false]
     
   was_profile_name:
     type: string
@@ -232,6 +216,21 @@ parameters:
     label: WAS Standalone server name
     default: server01
 
+  sdk_32bit:
+    type: string
+    description: sdk feature, can select 32 bit or 64 bit
+    label: Enable 32bit SDK
+    default: false
+    constraints:
+    - allowed_values: [true,false]
+
+  sdk_64bit:
+    type: string
+    description: sdk feature, can select 32 bit or 64 bit
+    label: Enable 64bit SDK
+    default: true
+    constraints:
+    - allowed_values: [true,false]
 
 parameter_groups:
     - { label: 'Host Name Parameters', parameters: [was_vm_name] }
