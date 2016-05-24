@@ -216,13 +216,13 @@ parameters:
     label: WAS Standalone server name
     default: server01
 
-  sdk_32bit:
-    type: string
-    description: sdk feature, can select 32 bit or 64 bit
-    label: Enable 32bit SDK
-    default: false
-    constraints:
-    - allowed_values: [true,false]
+#  sdk_32bit:
+#    type: string
+#    description: sdk feature, can select 32 bit or 64 bit
+#    label: Enable 32bit SDK
+#    default: false
+#    constraints:
+#    - allowed_values: [true,false]
 
   sdk_64bit:
     type: string
@@ -237,7 +237,7 @@ parameter_groups:
     - { label: 'Image Parameters', parameters: [flavor, key_name, availability_zone, image_id, virtuser_password, root_password, sw_repo_root] }
     - { label: 'Network Parameters', parameters: [private_network, public_network] }
     - { label: 'Salt Parameters', parameters: [salt_master_address, salt_api_user, salt_api_pass] }
-    - { label: 'WebSphere Parameters', parameters: [was_os_user, was_os_group, was_os_user_password, was_admin_username, was_admin_password, was_install_dir, was_profile_dir, im_install_dir, customer_log_dir_enabled, customer_log_dir, java7_enabled, was_fixpack, java_fixpack, sdk_32bit, sdk_64bit, was_profile_name, was_cell_name, was_node_name, was_server_name] }
+    - { label: 'WebSphere Parameters', parameters: [was_os_user, was_os_group, was_os_user_password, was_admin_username, was_admin_password, was_install_dir, was_profile_dir, im_install_dir, customer_log_dir_enabled, customer_log_dir, java7_enabled, was_fixpack, java_fixpack, sdk_64bit, was_profile_name, was_cell_name, was_node_name, was_server_name] }
     
 resources:
 
@@ -387,7 +387,7 @@ resources:
                   java_fixpack: $java_fixpack
                   customer_log_dir_enabled: $enabled_customer_log_dir
                   features:
-                    com.ibm.sdk.6_32bit: $sdk_32bit
+                    com.ibm.sdk.6_32bit: false
                     com.ibm.sdk.6_64bit: $sdk_64bit
                   security:
                     admin_user: $was_admin_username
@@ -436,7 +436,7 @@ resources:
             $java7_enabled: {get_param: java7_enabled}
             $was_fixpack: {get_param: was_fixpack}
             $java_fixpack: {get_param: java_fixpack}
-            $sdk_32bit: {get_param: sdk_32bit}
+          #  $sdk_32bit: {get_param: sdk_32bit}
             $sdk_64bit: {get_param: sdk_64bit}
             $was_admin_username: {get_param: was_admin_username}
             $was_admin_password: {get_param: was_admin_password}
