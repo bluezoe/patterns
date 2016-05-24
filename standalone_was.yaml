@@ -27,6 +27,7 @@ parameters:
     type: string
     description: Private Network
     label: Private network
+    default: 'private'
     constraints:
     - custom_constraint: neutron.network
     
@@ -34,6 +35,7 @@ parameters:
     type: string
     description: Public Network for floating IP
     label: Public network
+    default: 'Public-Network'
     constraints:
     - custom_constraint: neutron.network
     
@@ -63,25 +65,12 @@ parameters:
     type: string
     hidden: True
     default: 'test'
-    
-  yum_proxy_url:
-    description: URL of Proxy to utilize, if no proxy is needed then leave empty
-    label: Yum Proxy URL
-    type: string
-    hidden: True
-    default: ''
  
   sw_repo_root:
-    default: 'http://169.254.0.1:8080/'
+    default: 'http://159.122.223.65/sw_repo/'
     description: Software repository URL (e.g. http://x.x.x.x:8080/
     label: Software Repository URL
     type: string  
-     
-  yum_repo_url:
-    default: ''
-    description: URL to point to yum server e.g. http://x.x.x.x:yyyy
-    label: Yum repository url
-    type: string
 
 ############################
 # Salt Specific Parameters
@@ -295,8 +284,6 @@ resources:
     properties:
       parts:
       - config: {get_resource: setup_ssh} 
-      - config: {get_resource: prepare_yum}
-      - config: {get_resource: setup_yum_repo}
       - config: {get_resource: update_etc_hosts}
       - config: {get_resource: bootstrap_salt}
       - config: {get_resource: assign_roles}
@@ -525,21 +512,14 @@ resources:
           template: |
             #!/usr/bin/env bash
             set -e
-            if [ -f /etc/redhat-release ]; then
-              rpm -Uvh "http://169.254.0.1:8080/salt/saltstack-latest-el$(rpm -qf --qf "%{VERSION}" /etc/redhat-release | cut -c1).x86_64.rpm"
-            elif [ -f /etc/lsb-release ]; then
-              curl "http://169.254.0.1:8080/salt/saltstack-latest-trusty.x86_64.deb" -O
-              dpkg -i saltstack-latest-trusty.x86_64.deb
-              update-rc.d salt-minion start 80 2 3 4 5 .
-            fi
+            yum install -y https://repo.saltstack.com/yum/redhat/salt-repo-latest-1.el7.noarch.rpm 
+            yum install -y salt-minion
+
             chkconfig salt-minion on
             mkdir -p /etc/salt/pki/minion
             
             # retrieve saltMaster address from metadata if not passed
             saltMaster=$SALT_MASTER
-            if [ -z $saltMaster ] ; then
-              saltMaster=$(curl -s http://169.254.0.1:8080/metadata.yaml | awk '/salt_api_ip/ {print $2}')
-            fi
 
             # Default log_level warning            
             cat > /etc/salt/minion << EOF
@@ -557,7 +537,11 @@ resources:
             sleep 10
             service salt-minion start
             sleep 30
-            /opt/saltstack/embedded/bin/salt-wrapper.py register $SALT_API_USER $SALT_API_PASS
+
+            yum install -y git
+            git clone https://github.com/bluezoe/patterns.git
+            chmod +x ./patterns/salt-wrapper.py
+            ./patterns/salt-wrapper.py register $SALT_API_USER $SALT_API_PASS
           params:
             $SALT_API_USER: { get_param: salt_api_user}
             $SALT_API_PASS: { get_param: salt_api_pass}
@@ -592,54 +576,6 @@ resources:
             $USER_PWD: { get_param: virtuser_password}
             $ROOT_PWD: { get_param: root_password}
 
-#####################################################
-#  Only required if yum repo not configured in image
-#####################################################
-  prepare_yum:
-    type: "OS::Heat::SoftwareConfig"
-    properties:
-      config:
-        str_replace:
-          template: |
-            #!/usr/bin/env bash
-            set -e
-            if [ -n "$PROXY" ]; then
-              echo proxy=$PROXY >> /etc/yum.conf
-              service iptables stop
-            fi
-          params:
-            $PROXY: { get_param: yum_proxy_url}
-              
-  setup_yum_repo:
-    type: OS::Heat::CloudConfig
-    properties:
-      cloud_config:
-        # https://bugzilla.redhat.com/show_bug.cgi?id=1027406
-        bootcmd:
-          - 'grep "yum_add_repo" /etc/cloud/cloud.cfg || sed -i "s/cloud_config_modules:/&\n - yum_add_repo/" /etc/cloud/cloud.cfg'
-        yum_repos:
-          ServerOSMainRepo:
-            baseurl:
-              str_replace:
-                params: 
-                   $YUM_REPO_URL: { get_param: yum_repo_url }
-                template: '$YUM_REPO_URL/redhat/yum/7/server/os/x86_64'
-            enabled: true
-            gpgcheck: true
-            gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
-            sslverify: false
-            name: ServerOSMainRepo
-          ServerUpdatesMainRepo:
-            baseurl:
-              str_replace:
-                params: 
-                   $YUM_REPO_URL: { get_param: yum_repo_url }
-                template: '$YUM_REPO_URL/redhat/yum/7/server/updates/x86_64/'
-            enabled: true
-            gpgcheck: true
-            gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
-            sslverify: false
-            name: ServerUpdatesMainRepo
             
 outputs:
   blueprint_url:

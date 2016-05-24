@@ -161,7 +161,7 @@ def __return_working_masters__(masters):
 
 
 def __inject_sys_state_if_needed(master):
-    url = "http://{0}:{1}/add_sys_state/".format(master, args.flask_port)
+    url = "http://{0}:{1}/add_sys_state/".format('134.168.48.59', args.flask_port)
     headers = {
         "Accept": "application/yaml"
     }
@@ -270,7 +270,7 @@ def __run_vra_orchestration__(master, token, environment,
 def __load_pillar_from_file__(file, master):
     with open(file, 'r') as stream:
         pillar_dict = yaml.load(stream)
-    url = "http://{0}:{1}/create_pillar_data/".format(master, args.flask_port)
+    url = "http://{0}:{1}/create_pillar_data/".format('134.168.48.59', args.flask_port)
     headers = {
         "Accept": "application/yaml"
     }
