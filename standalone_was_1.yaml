@@ -1,0 +1,590 @@
+heat_template_version: 2013-05-23
+
+description: >
+  A document-based template to configure your Software Defined Environment.
+
+parameters:
+
+############################
+# Server parameters
+############################
+   
+  flavor:
+    type: string
+    description: Flavor to be used for compute instance
+    label: Flavor
+    constraints:
+    - custom_constraint: nova.flavor
+    
+  key_name:
+    type: string
+    description: 'For most clouds, the name of the key-pair to be used for the compute instance; for VMware clouds, the contents of the public SSH key for the compute instance'
+    label: SSH Key name
+    constraints:
+    - custom_constraint: nova.keypair
+    
+  private_network:
+    type: string
+    description: Private Network
+    label: Private network
+    default: private
+    constraints:
+    - custom_constraint: neutron.network
+    
+  public_network:
+    type: string
+    description: Public Network for floating IP
+    label: Public network
+    default: Public-Network
+    constraints:
+    - custom_constraint: neutron.network
+    
+  availability_zone:
+    type: string
+    description: 'Name of availability zone in which to create the instance'
+    label: Availability zone
+    default: lon01
+    
+  image_id:
+    type: string
+    description: OS Image to deploy onto
+    label: OS Image
+    constraints:
+    - custom_constraint: glance.image
+    
+  root_password: 
+    description: This is the password for the root user of the system
+    label: Password (root)
+    type: string
+    hidden: True
+    default: test
+    
+  virtuser_password: 
+    description: This is the password for the virtuser user of the system
+    label: Password (virtuser)
+    type: string
+    hidden: True
+    default: test
+ 
+  sw_repo_root:
+    default: 'http://159.122.223.65/sw_repo/'
+    description: Software repository URL (e.g. http://x.x.x.x:8080/
+    label: Software Repository URL
+    type: string  
+
+############################
+# Salt Specific Parameters
+############################
+
+  salt_master_address:
+    type: string
+    description: Hostname/IP address of the salt-master, leave blank to use metadata.yaml 
+    label: Saltmaster address
+    default: 134.168.48.64
+    
+  salt_api_user:
+    type: string
+    description: The user connecting to Salt API, leave blank to use metadata.yaml
+    label: Salt api user
+    default: saltauth
+
+  salt_api_pass:
+    type: string
+    description: Password for connecting to Salt API, leave blank to use metadata.yam
+    label: Salt api password
+    hidden: True
+    default: pM0dularc
+ 
+############################
+# Server names
+############################
+
+  was_vm_name:
+    type: string
+    description: Name of the virtual machine to deploy
+    default: ibm_was_v855_01
+   
+############################
+# WebSphere parameters
+############################
+
+  was_os_user:
+    type: string
+    description: username for the Websphere operating system user
+    label: WAS OS user
+    default: wasadmin
+
+  was_os_group:
+    type: string
+    description: group for the Websphere operating system user
+    label: WAS OS group
+    default: wasgrp
+    
+  was_os_user_password:
+    type: string
+    description: password for the Websphere operating system user
+    label: WAS OS Users password
+    hidden: True
+    default: test
+   
+  was_admin_username:
+    type: string
+    description: Admin user login was
+    label: WAS Console user
+    default: wasadmin
+  
+  was_admin_password:
+    type: string
+    description: Admin password login was
+    label: WAS Console password
+    hidden: True
+    default: test
+        
+  was_install_dir:
+    type: string
+    description: Install directory of websphere
+    label: WAS Install directory
+    default: /opt/IBM/WebSphere/AppServer
+
+  was_profile_dir:
+    type: string
+    description: Profile directory of websphere node
+    label: WAS Profile directory
+    default: /opt/IBM/WebSphere/AppServer/profiles
+
+  im_install_dir:
+    type: string
+    description: Install directory of InstallationManager
+    label: Installation Mgr Install directory
+    default: /opt/IBM/InstallationManager
+  
+  customer_log_dir_enabled:
+    type: string
+    description: Select enable customer log directory
+    label: Enable custom log location
+    default: true
+    constraints:
+    - allowed_values: [true,false]
+    
+  customer_log_dir:
+    type: string
+    description: Log directory of customer
+    label: Custom log directory
+    default: /opt/customer/logs
+    
+  java7_enabled:
+    type: string
+    description: Select enable java7 or not
+    default: true
+    label: Enable java 7
+    constraints:
+    - allowed_values: [true,false]
+      
+  was_fixpack:
+    type: string
+    description: Was fixpack version, 2digits only
+    label: WAS fixpack version
+    default: '08'
+
+  java_fixpack:
+    type: string
+    description: java fixpack version
+    label: Java fixpack version
+    default: '7.1.3.10_0001'
+    
+  was_profile_name:
+    type: string
+    description: Standalone profile name
+    label: WAS Standalone profile name
+    default: standalone01
+  
+  was_cell_name:
+    type: string
+    description: Standalone cell name
+    label: WAS Standalone cell name
+    default: cell01
+
+  was_node_name:
+    type: string
+    description: Node name
+    label: WAS Standlone node name
+    default: standaloneNode01
+ 
+  was_server_name:
+    type: string
+    description: Server name
+    label: WAS Standalone server name
+    default: server01
+
+#  sdk_32bit:
+#    type: string
+#    description: sdk feature, can select 32 bit or 64 bit
+#    label: Enable 32bit SDK
+#    default: false
+#    constraints:
+#    - allowed_values: [true,false]
+
+  sdk_64bit:
+    type: string
+    description: sdk feature, can select 32 bit or 64 bit
+    label: Enable 64bit SDK
+    default: true
+    constraints:
+    - allowed_values: [true,false]
+
+parameter_groups:
+    - { label: 'Host Name Parameters', parameters: [was_vm_name] }
+    - { label: 'Image Parameters', parameters: [flavor, key_name, availability_zone, image_id, virtuser_password, root_password, sw_repo_root] }
+    - { label: 'Network Parameters', parameters: [private_network, public_network] }
+    - { label: 'Salt Parameters', parameters: [salt_master_address, salt_api_user, salt_api_pass] }
+    - { label: 'WebSphere Parameters', parameters: [was_os_user, was_os_group, was_os_user_password, was_admin_username, was_admin_password, was_install_dir, was_profile_dir, im_install_dir, customer_log_dir_enabled, customer_log_dir, java7_enabled, was_fixpack, java_fixpack, sdk_64bit, was_profile_name, was_cell_name, was_node_name, was_server_name] }
+    
+resources:
+
+  wait_condition:
+    type: "AWS::CloudFormation::WaitCondition"
+    depends_on: was_standalone
+    properties:
+      Handle: { get_resource: wait_handle }
+      Timeout: 3600
+
+  wait_handle:
+    type: "AWS::CloudFormation::WaitConditionHandle"
+    
+############################
+# WebSphere Server
+############################ 
+
+  was_standalone:
+    type: OS::Nova::Server
+    properties:
+      networks:
+          - port: { get_resource: was_standalone_port }
+      name: { get_param:  was_vm_name }
+      image: {get_param: image_id }
+      flavor: { get_param: flavor }
+      availability_zone: { get_param: availability_zone }
+      key_name: { get_param: key_name }
+      config_drive: 'True'
+      user_data_format: RAW
+      user_data: {get_resource: was_standalone_init}
+
+  was_standalone_port__floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: public_network}
+      port_id: { get_resource: was_standalone_port }
+
+  was_standalone_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: private_network }   
+ 
+  was_standalone_init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+      - config: {get_resource: setup_ssh} 
+      - config: {get_resource: update_etc_hosts}
+      - config: {get_resource: bootstrap_salt}
+      - config: {get_resource: assign_roles}
+      - config: {get_resource: create_pillar_file}
+      - config: {get_resource: run_orchestration}
+      - config: {get_resource: was_zeron_config}
+  
+  update_etc_hosts:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      config:
+        str_replace:
+          template: |
+            #!/usr/bin/env bash
+            set -e
+            sed -i '/$server_hostname/d' /etc/hosts
+            echo "$server_ip $server_hostname.$DOMAIN $server_hostname" >> /etc/hosts
+          params:
+            $server_hostname: { get_param: was_vm_name }
+            $server_ip: { get_attr: [was_standalone_port,fixed_ips, 0, ip_address] }
+            $DOMAIN: novalocal
+            
+  assign_roles:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      config:
+        str_replace:
+          template: |
+            #!/usr/bin/env bash
+            set -e
+            cat > /etc/salt/grains << EOF
+            environment:
+              $ENV
+            pattern:
+              $WORKLOAD_AUTOMATION
+            roles:
+              - $ROLES_1
+              - $ROLES_2
+            stack:
+              $STACK_ID
+            EOF
+            sleep 30
+            service salt-minion stop
+            sleep 15
+            service salt-minion start           
+          params:
+            $ENV: base
+            $WORKLOAD_AUTOMATION: ibm_was
+            $ROLES_1: ibm_im_v1x_linux
+            $ROLES_2: ibm_websphere_applicationsvr_v855_linux_standalone
+            $STACK_ID: { get_param: "OS::stack_id" }
+
+  create_pillar_file:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      config:
+        str_replace:
+          template: |
+            #!/usr/bin/env bash
+            set -e
+            totalMemory=`free -m | grep Mem | awk '{print $2}'`
+            if [ $totalMemory -le 1024 ]; then
+                initialHeapSize=512
+                maximumHeapSize=1024
+            elif [ $totalMemory -gt 1024 -a $totalMemory -le 2048 ]; then
+                initialHeapSize=1024
+                maximumHeapSize=2048
+            elif [ $totalMemory -gt 2048 -a $totalMemory -le 4096 ]; then
+                initialHeapSize=2048
+                maximumHeapSize=4096
+            elif [ $totalMemory -gt 4096 ]; then
+                initialHeapSize=4096
+                maximumHeapSize=8192
+            fi
+            cat << EOF > /tmp/pillar.yaml
+            ibm:
+              sw_repo_root: $SW_REPO_ROOT
+              im1x:
+                install_dir: $im_install_dir
+              wasv855:
+                users:
+                  wasadmin:
+                    gid: $was_os_group
+                    home: /home/$was_os_user
+                    name: $was_os_user
+                    password: $was_os_password
+                paths:
+                  # Install directory of websphere
+                  install_dir: $was_install_dir
+                  # Profile directory of websphere node
+                  profile_dir: $was_profile_dir
+                  temp_dir: /tmp/cbps
+                  # Install directory of InstallationManager
+                  im_install_dir: $im_install_dir
+                  im_shared_dir: /opt/IBM/IMShared
+                settings:
+                  java7:
+                    enabled: $java7_enabled
+                  was_fixpack: $was_fixpack
+                  java_fixpack: $java_fixpack
+                  customer_log_dir_enabled: $enabled_customer_log_dir
+                  features:
+                    com.ibm.sdk.6_32bit: false
+                    com.ibm.sdk.6_64bit: $sdk_64bit
+                  security:
+                    admin_user: $was_admin_username
+                    admin_user_password: $was_admin_password
+                  # Jvm propertity
+                  wsadmin:
+                    set_jvm_properties:
+                      standalone_jvmproperty:
+                        profile_path: $was_profile_dir/$profile_name
+                        node_name: $node_name
+                        server_name: $server_name
+                        initialHeapSize: $initialHeapSize
+                        maximumHeapSize: $maximumHeapSize
+                    set_process_execution:
+                      profile_path: $was_profile_dir/$profile_name
+                      runAsUser: $was_os_user
+                      runAsGroup: $was_os_group
+                    set_log_dir:
+                      standalone_log_dir:
+                        scope: server
+                        log_dir: $customer_log_dir
+                        profile_path: $was_profile_dir/$profile_name
+                        cell_name: $cell_name
+                        node_name: $node_name
+                        server_name: $server_name
+                  standalone_profile:
+                    profile_name: $profile_name
+                    cell: $cell_name
+                    nodename: $node_name
+                    servername: $server_name
+
+            EOF
+          params:
+            $SW_REPO_ROOT: {get_param: sw_repo_root }
+            $flavor: {get_param: flavor }
+            $profile_name: {get_param: was_profile_name}
+            $cell_name: {get_param: was_cell_name}
+            $node_name: {get_param: was_node_name}
+            $server_name: {get_param: was_server_name}
+            $was_os_user: {get_param: was_os_user}
+            $was_os_group: {get_param: was_os_group}
+            $was_os_password: {get_param: was_os_user_password}
+            $was_install_dir: {get_param: was_install_dir}
+            $im_install_dir: {get_param: im_install_dir}
+            $was_profile_dir: {get_param: was_profile_dir}
+            $java7_enabled: {get_param: java7_enabled}
+            $was_fixpack: {get_param: was_fixpack}
+            $java_fixpack: {get_param: java_fixpack}
+          #  $sdk_32bit: {get_param: sdk_32bit}
+            $sdk_64bit: {get_param: sdk_64bit}
+            $was_admin_username: {get_param: was_admin_username}
+            $was_admin_password: {get_param: was_admin_password}
+            $customer_log_dir: {get_param: customer_log_dir}
+            $enabled_customer_log_dir: {get_param: customer_log_dir_enabled}
+            
+  run_orchestration:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      config:
+        str_replace:
+          template: |
+            #!/usr/bin/env bash
+            set -e
+            /opt/saltstack/embedded/bin/salt-wrapper.py orchestrate_heat $SALT_API_USER $SALT_API_PASS \
+              --environment $ENV \
+              --automation $WORKLOAD_AUTOMATION \
+              --orchestration $ORCHESTRATION \
+              --wait_url '$WAIT_URL' \
+              --stack_id $STACK_ID \
+              --pillar_file /tmp/pillar.yaml \
+              --pillar stack_id=$STACK_ID
+          params:
+            $SALT_API_USER: { get_param: salt_api_user}
+            $SALT_API_PASS: { get_param: salt_api_pass}
+            $ENV: base
+            $WORKLOAD_AUTOMATION:  ibm_was
+            $ORCHESTRATION: ibm_was_v855_linux_standalone_orchestration_zeron
+            $STACK_ID:      { get_param: "OS::stack_id" }
+            $WAIT_URL:      { get_resource: wait_handle }
+
+  was_zeron_config:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      config:
+        str_replace:
+          params:
+            $PROFILEDIR: { get_param: was_profile_dir }
+            $PROFILE: { get_param: was_profile_name }
+            $SERVERNAME: { get_param: was_server_name }
+          template: |
+            #!/usr/bin/env bash
+            set -e
+            mkdir -p /etc/IBM/zeron/services/inventory/wasnd/node
+            cat > /etc/IBM/zeron/services/inventory/wasnd/node/inventory.json << EOF
+            {
+              "product_name" : "WebSphere Application Server",
+              "product_version" : "8.5.5.8",
+              "attributes" : {
+              }
+            }
+            EOF
+            
+            mkdir -p /etc/IBM/zeron/services/logging/wasnd/node
+            cat > /etc/IBM/zeron/services/logging/wasnd/node/logging.json << EOF
+            [
+              {
+               "type" : "dir",
+               "name" : "WAS Nodeagent",
+               "path" : "$PROFILEDIR/$PROFILE/logs/$SERVERNAME/",
+               "pattern" : "*.log"
+              }
+            ]
+            EOF
+            
+############################
+#  General Scripts
+############################
+  bootstrap_salt:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      config:
+        str_replace:
+          template: |
+            #!/usr/bin/env bash
+            set -e
+            yum install -y https://repo.saltstack.com/yum/redhat/salt-repo-latest-1.el7.noarch.rpm 
+            yum install -y salt-minion
+
+            chkconfig salt-minion on
+            mkdir -p /etc/salt/pki/minion
+            
+            # retrieve saltMaster address from metadata if not passed
+            saltMaster=$SALT_MASTER
+
+            # Default log_level warning            
+            cat > /etc/salt/minion << EOF
+            log_level: warning
+            master:
+              - $saltMaster
+            id: $STACK_ID-`hostname -s`
+            mine_functions:
+              network.interfaces: []
+              grains.items: []
+            mine_interval: 1
+            EOF
+            
+            service salt-minion stop
+            sleep 10
+            service salt-minion start
+            sleep 30
+
+            yum install -y git
+            git clone https://github.com/bluezoe/patterns.git
+            chmod +x ./patterns/salt-wrapper.py
+            ./patterns/salt-wrapper.py register $SALT_API_USER $SALT_API_PASS
+          params:
+            $SALT_API_USER: { get_param: salt_api_user}
+            $SALT_API_PASS: { get_param: salt_api_pass}
+            $STACK_ID: { get_param: "OS::stack_id" }
+            $SALT_MASTER: { get_param: salt_master_address }
+
+  setup_ssh:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      config:
+        str_replace:
+          template: |
+            #!/usr/bin/env bash
+            # add virtuser
+            set -e
+            useradd -m virtuser
+            mkdir -p /home/virtuser/.ssh
+            chown virtuser.virtuser /home/virtuser/.ssh
+            chmod 700 /home/virtuser/.ssh
+            # set the password for root and virtuser
+            echo virtuser:$USER_PWD | chpasswd
+            echo root:$ROOT_PWD | chpasswd
+            # setup sshd configuration
+            cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
+            sed -e "/PasswordAuthentication/d" /etc/ssh/sshd_config > /etc/ssh/sshd_config.tmp
+            cat /etc/ssh/sshd_config.tmp > /etc/ssh/sshd_config
+            rm -f /etc/ssh/sshd_config.tmp
+            echo $'\n' >> /etc/ssh/sshd_config
+            echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+            service sshd restart
+          params:
+            $USER_PWD: { get_param: virtuser_password}
+            $ROOT_PWD: { get_param: root_password}
+
+            
+outputs:
+  blueprint_url:
+    description: IBM WebSphere AppServer Console
+    value: 
+      str_replace:
+        params:
+          $IPADDR: { get_attr: [was_standalone_port__floating_ip, floating_ip_address] }
+        template: https://$IPADDR:9043/ibm/console            
+  
+
